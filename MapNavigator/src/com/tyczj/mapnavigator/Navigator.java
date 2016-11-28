@@ -16,22 +16,22 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.os.AsyncTask;
 
 public class Navigator {
+	@SuppressWarnings("unused")
 	private Context context;
 	private LatLng startPosition, endPosition;
 	private String mode;
-	private boolean showCalc;
 	private GoogleMap map;
 	private Directions directions;
 	private int pathColor = Color.BLUE;
+	private int pathBorderColor = Color.BLACK;
 	private int secondPath = Color.CYAN;
 	private int thirdPath = Color.RED;
-	private float pathWidth = 5;
+	private float pathWidth = 14;
 	private OnPathSetListener listener;
 	private boolean alternatives = false;
 	private long arrivalTime;
@@ -77,7 +77,7 @@ public class Navigator {
 	 *  give alternative routes to the destination
 	 *  
 	 */
-	public void findDirections(boolean showDialog,boolean findAlternatives){
+	public void findDirections(boolean findAlternatives){
 		this.alternatives = findAlternatives;
 		new PathCreator().execute();
 	}
@@ -147,6 +147,10 @@ public class Navigator {
 		pathColor = firstPath;
 	}
 	
+	public void setPathBorderColor(int firstPath,int secondPath, int thirdPath){
+		pathBorderColor = firstPath;
+	}
+	
 	/**
 	 * Change the width of the path line
 	 * @param width
@@ -160,21 +164,15 @@ public class Navigator {
 		return map.addPolyline(new PolylineOptions().addAll(route.getPath()).color(color).width(pathWidth));
 	}
 	
+	private Polyline showBorderPath(Route route, int color){
+		return map.addPolyline(new PolylineOptions().addAll(route.getPath()).color(color).width(pathWidth + 12));
+	}
+	
 	public ArrayList<Polyline> getPathLines(){
 		return lines;
 	}
 
 	private class PathCreator extends AsyncTask<Void,Void,Directions>{
-		private ProgressDialog pd;
-		@Override
-		protected void onPreExecute(){
-			if(showCalc){
-				pd = new ProgressDialog(context);
-				pd.setMessage("Getting Directions");
-				pd.setIndeterminate(true);
-				pd.show();
-			}
-		}
 
 		@Override
 		protected Directions doInBackground(Void... params) {
@@ -208,7 +206,6 @@ public class Navigator {
 		            if(response.getStatusLine().getStatusCode() == HttpStatus.SC_OK){
 		            	
 		            	String s = EntityUtils.toString(response.getEntity());
-			            
 			            return new Directions(s);
 		            }
 		            
@@ -228,10 +225,13 @@ public class Navigator {
 				for(int i=0; i<directions.getRoutes().size(); i++){
 					Route r = directions.getRoutes().get(i);
 					if(i == 0){
+						lines.add(showBorderPath(r,pathBorderColor));
 						lines.add(showPath(r,pathColor));
 					}else if(i == 1){
+						lines.add(showBorderPath(r,pathBorderColor));
 						lines.add(showPath(r,secondPath));
 					}else if(i == 3){
+						lines.add(showBorderPath(r,pathBorderColor));
 						lines.add(showPath(r,thirdPath));
 					}
 				}
@@ -240,10 +240,6 @@ public class Navigator {
 					listener.onPathSetListener(directions);
 				}
 				
-			}
-			
-			if(showCalc && pd != null){
-				pd.dismiss();
 			}
 		}
 		
